@@ -41,13 +41,13 @@ got_beef(int fd, const char *const *dirs)
 		fputc('\t', stdout);
 		fputs(dirs[inev->wd - 1], stdout);
 		fputc('\t', stdout);
-		if (inev->mask & IN_CREATE || inev->mask & IN_MOVED_TO) {
+		if (inev->mask & (IN_CREATE | IN_MOVED_TO)) {
 			fputc('c', stdout);
 		}
 		if (inev->mask & IN_MOVED_TO) {
 			fputc('i', stdout);
 		}
-		if (inev->mask & IN_DELETE || inev->mask & IN_MOVED_FROM) {
+		if (inev->mask & (IN_DELETE | IN_MOVED_FROM)) {
 			fputc('x', stdout);
 		}
 		if (inev->mask & IN_MOVED_FROM) {
