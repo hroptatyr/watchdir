@@ -29,33 +29,36 @@ got_beef(int fd, const char *const *dirs)
 {
 	static uint8_t buf[4096];
 	struct inotify_event *restrict inev = (void*)buf;
+	ssize_t nrd;
 
-	if (read(fd, buf, sizeof(buf)) < sizeof(*inev)) {
-		return -1;
-	}
+	while ((nrd = read(fd, buf, sizeof(buf))) >= 0) {
+		if (nrd < sizeof(*inev)) {
+			return -1;
+		}
 
-	/* prepend time stamp */
-	fputt(stdout);
-	fputc('\t', stdout);
-	fputs(dirs[inev->wd - 1], stdout);
-	fputc('\t', stdout);
-	if (inev->mask & IN_CREATE || inev->mask & IN_MOVED_TO) {
-		fputc('c', stdout);
-	}
-	if (inev->mask & IN_MOVED_TO) {
-		fputc('i', stdout);
-	}
-	if (inev->mask & IN_DELETE || inev->mask & IN_MOVED_FROM) {
-		fputc('x', stdout);
-	}
-	if (inev->mask & IN_MOVED_FROM) {
-		fputc('o', stdout);
-	}
-	if (inev->len > 0) {
+		/* prepend time stamp */
+		fputt(stdout);
 		fputc('\t', stdout);
-		fputs(inev->name, stdout);
+		fputs(dirs[inev->wd - 1], stdout);
+		fputc('\t', stdout);
+		if (inev->mask & IN_CREATE || inev->mask & IN_MOVED_TO) {
+			fputc('c', stdout);
+		}
+		if (inev->mask & IN_MOVED_TO) {
+			fputc('i', stdout);
+		}
+		if (inev->mask & IN_DELETE || inev->mask & IN_MOVED_FROM) {
+			fputc('x', stdout);
+		}
+		if (inev->mask & IN_MOVED_FROM) {
+			fputc('o', stdout);
+		}
+		if (inev->len > 0) {
+			fputc('\t', stdout);
+			fputs(inev->name, stdout);
+		}
+		fputc('\n', stdout);
 	}
-	fputc('\n', stdout);
 	return 0;
 }
 
@@ -92,20 +95,23 @@ main(int argc, char *argv[])
 	}
 
 	/* prepare watches */
-	inofd = inotify_init1(IN_CLOEXEC);
+	inofd = inotify_init1(IN_CLOEXEC | IN_NONBLOCK);
 	for (unsigned int i = 0; i < argi->inputs_num; i++) {
 		watchdir(inofd, argi->inputs[i]);
 	}
 
 	/* prepare main loop */
 	epfd = epoll_create1(EPOLL_CLOEXEC);
-	ev->events = EPOLLIN | EPOLLET;
+	ev->events = EPOLLIN | EPOLLHUP | EPOLLET;
 	ev->data.fd = inofd;
 	epoll_ctl(epfd, EPOLL_CTL_ADD, inofd, ev);
 
 	/* main loop */
 	while (epoll_wait(epfd, ev, 1, -1)) {
-		if (got_beef(ev->data.fd, argi->inputs) < 0) {
+		if (ev->events & EPOLLIN &&
+		    got_beef(ev->data.fd, argi->inputs) < 0) {
+			break;
+		} else if (ev->events & EPOLLHUP) {
 			break;
 		}
 	}
