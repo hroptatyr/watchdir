@@ -1,6 +1,6 @@
 args "--unamed-opts --no-help --long-help --no-handle-error -a wd_args_info -f wd_parser"
 package "watchdir"
-usage "watchdir DIR"
+usage "watchdir DIR..."
 description "Watch directory for creation/deletion."
 
 option "help" h
