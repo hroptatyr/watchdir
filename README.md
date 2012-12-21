@@ -12,6 +12,6 @@ File moves as `ci` and `xo` pairs, if happening in the watched director{y,ies}.
 
 
 Similar projects
-================
+----------------
 
 + inotify-tools: <https://github.com/rvoicilas/inotify-tools>
